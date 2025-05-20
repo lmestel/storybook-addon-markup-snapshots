@@ -5,7 +5,7 @@ const config: StorybookConfig = {
   addons: [
     "@storybook/addon-a11y",
     "@storybook/addon-vitest",
-    "../src/addon/manager.tsx",
+    "../src/addon/preset.ts",
   ],
   framework: {
     name: "@storybook/react-vite",

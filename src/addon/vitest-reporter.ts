@@ -1,15 +1,35 @@
 import path from "node:path";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import type { Reporter } from "vitest/reporters";
 import type { TaskMeta } from "@vitest/runner";
 import type { TestCase } from "vitest/node";
 import type { Report } from "storybook/preview-api";
-import { TEST_PROVIDER_ID } from "./constants";
+import { ADDON_ID, TEST_PROVIDER_ID } from "./constants";
+
+const require = createRequire(import.meta.url);
+
+// we need to require core-server here, because its ESM output is not valid
+const { experimental_UniversalStore } =
+  require("storybook/internal/core-server") as {
+    experimental_UniversalStore: typeof import("storybook/internal/core-server").experimental_UniversalStore;
+  };
 
 const write = process.env.VITEST_STORYBOOK !== "true";
 
+const store = experimental_UniversalStore.create({
+  id: ADDON_ID,
+  initialState: new Map(),
+});
+
 export default class SnapshotDiffReporter implements Reporter {
   outputDir = "story-patches";
+
+  async onInit() {
+    if (!write) {
+      await store.untilReady();
+    }
+  }
 
   onTestRunStart() {
     if (write) {
@@ -28,6 +48,8 @@ export default class SnapshotDiffReporter implements Reporter {
           if (write) {
             fs.writeFileSync(outputPath, report.result);
             console.log(`📝 Wrote snapshot diff to: ${outputPath}`);
+          } else {
+            store.setState((store) => store.set(storyId, report.result));
           }
         }
       }
