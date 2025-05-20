@@ -1,9 +1,41 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Large 1`] = `"<button type="button" class="storybook-button storybook-button--large storybook-button--secondary">Button</button>"`;
+exports[`Large 1`] = `
+"<button
+  type="button"
+  class="storybook-button storybook-button--large storybook-button--secondary"
+>
+  Button
+</button>
+"
+`;
 
-exports[`Primary 1`] = `"<button type="button" class="storybook-button storybook-button--medium storybook-button--primary" style="background-color: gold;">Button</button>"`;
+exports[`Primary 1`] = `
+"<button
+  type="button"
+  class="storybook-button storybook-button--medium storybook-button--primary"
+>
+  Button
+</button>
+"
+`;
 
-exports[`Secondary 1`] = `"<button type="button" class="storybook-button storybook-button--medium storybook-button--secondary">Button</button>"`;
+exports[`Secondary 1`] = `
+"<button
+  type="button"
+  class="storybook-button storybook-button--medium storybook-button--secondary"
+>
+  Button
+</button>
+"
+`;
 
-exports[`Small 1`] = `"<button type="button" class="storybook-button storybook-button--small storybook-button--secondary">Button</button>"`;
+exports[`Small 1`] = `
+"<button
+  type="button"
+  class="storybook-button storybook-button--small storybook-button--secondary"
+>
+  Button
+</button>
+"
+`;
