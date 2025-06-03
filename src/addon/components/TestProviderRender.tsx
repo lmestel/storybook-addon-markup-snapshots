@@ -1,4 +1,9 @@
-import React, { useMemo, type ComponentProps, type FC } from "react";
+import React, {
+  useCallback,
+  useMemo,
+  type ComponentProps,
+  type FC,
+} from "react";
 
 import {
   Checkbox,
@@ -12,9 +17,10 @@ import {
   experimental_UniversalStore,
   experimental_useTestProviderStore,
   experimental_useUniversalStore,
+  type API,
 } from "storybook/internal/manager-api";
 import { styled } from "storybook/theming";
-import type { State } from "../constants";
+import { PANEL_ID, type State } from "../constants";
 import { TestStatusIcon } from "./TestStatusIcon";
 
 const Container = styled.div({
@@ -31,31 +37,51 @@ const Row = styled.div({
 type TestProviderRenderProps = {
   entry?: API_HashEntry;
   store: experimental_UniversalStore<State>;
+  api: API;
 } & ComponentProps<typeof Container>;
+
+type Status = "idle" | "running" | "passed" | "failed" | "warning";
 
 export const TestProviderRender: FC<TestProviderRenderProps> = ({
   entry,
   store,
+  api,
   ...props
 }) => {
   const [state] = experimental_useUniversalStore(store);
   const componentTestProviderState = experimental_useTestProviderStore(
     (state) => state["storybook/test"]
   );
-  const status = useMemo<"idle" | "running" | "passed" | "failed">(() => {
+  const storyId = entry?.type === "story" && entry.id;
+  const statusByStoryId = useMemo<[string, Status][]>(() => {
+    if (storyId && state[storyId]) {
+      return [[storyId, state[storyId].status]];
+    }
+
+    const componentId = entry?.type === "component" && entry.id;
+    return Object.entries(state).reduce<[string, Status][]>(
+      (prev, [storyId, report]) => {
+        if (!componentId || storyId.split("--")[0] === componentId) {
+          prev.push([storyId, report.status]);
+        }
+        return prev;
+      },
+      []
+    );
+  }, [state, storyId, entry]);
+  const status = useMemo<Status>(() => {
     if (componentTestProviderState === "test-provider-state:running") {
       return "running";
     }
 
-    const reports = Object.values(state);
-    if (reports.length) {
-      return reports.some((report) => report.status === "failed")
+    if (statusByStoryId.length) {
+      return statusByStoryId.some(([, status]) => status === "failed")
         ? "failed"
         : "passed";
     }
 
     return "idle";
-  }, [componentTestProviderState, state]);
+  }, [componentTestProviderState, statusByStoryId]);
 
   const [componentTestStatusIcon, componentTestStatusLabel]: [
     ComponentProps<typeof TestStatusIcon>["status"],
@@ -68,6 +94,19 @@ export const TestProviderRender: FC<TestProviderRenderProps> = ({
         : status === "running"
           ? ["unknown", "Testing in progress"]
           : ["unknown", "Run tests to see results"];
+  const firstFailedStoryId = useMemo(() => {
+    for (const [storyId, status] of statusByStoryId) {
+      if (status === "failed") return storyId;
+    }
+  }, [statusByStoryId]);
+  const openPanel = useCallback(() => {
+    const storyToSelect = storyId || firstFailedStoryId;
+    if (storyToSelect) {
+      api.selectStory(storyToSelect);
+    }
+    api.setSelectedPanel(PANEL_ID);
+    api.togglePanel(true);
+  }, [storyId, api, firstFailedStoryId]);
 
   return (
     <Container {...props}>
@@ -82,7 +121,11 @@ export const TestProviderRender: FC<TestProviderRenderProps> = ({
           trigger="hover"
           tooltip={<TooltipNote note={componentTestStatusLabel} />}
         >
-          <IconButton size="medium" disabled>
+          <IconButton
+            size="medium"
+            disabled={status === "running" || status === "idle"}
+            onClick={openPanel}
+          >
             <TestStatusIcon
               status={componentTestStatusIcon}
               aria-label={componentTestStatusLabel}
