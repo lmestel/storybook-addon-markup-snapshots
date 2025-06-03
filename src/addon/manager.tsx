@@ -20,8 +20,8 @@ addons.register(ADDON_ID, (api) => {
     initialState: {},
   });
 
-  const accept = (storyId: string) => {
-    const event = { type: ADDON_ID + "__accept", storyId };
+  const accept = (fileName: string) => {
+    const event = { type: ADDON_ID + "__accept", fileName };
     const eventInfo: EventInfo = { actor: store.actor };
     // @ts-expect-error channel is a private property
     store.channel.emit("UNIVERSAL_STORE:storybook/test", { event, eventInfo });
