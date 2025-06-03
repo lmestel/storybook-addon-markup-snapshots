@@ -1,15 +1,21 @@
 import type { Channel } from "storybook/internal/channels";
 import { experimental_UniversalStore } from "storybook/internal/core-server";
-import { ADDON_ID } from "./constants";
+import { ADDON_ID, type State, type Event } from "./constants";
 
 export const experimental_serverChannel = async (channel: Channel) => {
-  const store = experimental_UniversalStore.create({
+  const store = experimental_UniversalStore.create<State>({
     id: ADDON_ID,
-    initialState: new Map(),
+    initialState: {},
     leader: true,
   });
-  store.onStateChange((state) => {
-    console.log("onStateChange", state);
+
+  channel.on(ADDON_ID, ({ event }: { event: Event }) => {
+    store.setState((state) => {
+      return {
+        ...state,
+        [event.storyId]: event.report,
+      };
+    });
   });
 
   return channel;

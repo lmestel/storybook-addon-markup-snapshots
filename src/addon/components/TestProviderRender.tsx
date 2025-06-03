@@ -1,4 +1,4 @@
-import React, { type ComponentProps, type FC } from "react";
+import React, { useMemo, type ComponentProps, type FC } from "react";
 
 import {
   Checkbox,
@@ -8,9 +8,13 @@ import {
   WithTooltip,
 } from "storybook/internal/components";
 import type { API_HashEntry } from "storybook/internal/types";
-import { experimental_useTestProviderStore } from "storybook/internal/manager-api";
+import {
+  experimental_UniversalStore,
+  experimental_useTestProviderStore,
+  experimental_useUniversalStore,
+} from "storybook/internal/manager-api";
 import { styled } from "storybook/theming";
-
+import type { State } from "../constants";
 import { TestStatusIcon } from "./TestStatusIcon";
 
 const Container = styled.div({
@@ -26,24 +30,44 @@ const Row = styled.div({
 
 type TestProviderRenderProps = {
   entry?: API_HashEntry;
+  store: experimental_UniversalStore<State>;
 } & ComponentProps<typeof Container>;
 
 export const TestProviderRender: FC<TestProviderRenderProps> = ({
   entry,
+  store,
   ...props
 }) => {
+  const [state] = experimental_useUniversalStore(store);
   const componentTestProviderState = experimental_useTestProviderStore(
     (state) => state["storybook/test"]
   );
-  const isRunning =
-    componentTestProviderState === "test-provider-state:running";
+  const status = useMemo<"idle" | "running" | "passed" | "failed">(() => {
+    if (componentTestProviderState === "test-provider-state:running") {
+      return "running";
+    }
+
+    const reports = Object.values(state);
+    if (reports.length) {
+      return reports.some((report) => report.status === "failed")
+        ? "failed"
+        : "passed";
+    }
+
+    return "idle";
+  }, [componentTestProviderState, state]);
 
   const [componentTestStatusIcon, componentTestStatusLabel]: [
     ComponentProps<typeof TestStatusIcon>["status"],
-    string
-  ] = isRunning
-    ? ["unknown", "Testing in progress"]
-    : ["unknown", "Run tests to see results"];
+    string,
+  ] =
+    status === "failed"
+      ? ["negative", "Markup changes detected"]
+      : status === "passed"
+        ? ["positive", "No markup changes"]
+        : status === "running"
+          ? ["unknown", "Testing in progress"]
+          : ["unknown", "Run tests to see results"];
 
   return (
     <Container {...props}>
@@ -62,7 +86,7 @@ export const TestProviderRender: FC<TestProviderRenderProps> = ({
             <TestStatusIcon
               status={componentTestStatusIcon}
               aria-label={componentTestStatusLabel}
-              isRunning={isRunning}
+              isRunning={status === "running"}
             />
           </IconButton>
         </WithTooltip>

@@ -33,7 +33,7 @@ const preview: markupAddonAnnotations = {
         result: undefined,
         status: "passed",
       });
-    } catch (error) {
+    } catch (error: any) {
       storyContext.reporting.addReport({
         type: TEST_PROVIDER_ID,
         version: 1,

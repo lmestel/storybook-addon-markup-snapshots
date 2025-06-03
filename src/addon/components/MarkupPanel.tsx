@@ -1,13 +1,29 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo, useState, type FC } from "react";
 import {
   STORY_FINISHED,
   type StoryFinishedPayload,
 } from "storybook/internal/core-events";
-import { useChannel } from "storybook/internal/manager-api";
+import {
+  experimental_useUniversalStore,
+  useChannel,
+  experimental_UniversalStore,
+} from "storybook/internal/manager-api";
+import type { State } from "../constants";
 
-export const MarkupPanel = () => {
+type MarkupPanelProps = {
+  accept: (storyId: string) => void;
+  active?: boolean;
+  store: experimental_UniversalStore<State>;
+};
+
+export const MarkupPanel: FC<MarkupPanelProps> = ({
+  accept,
+  active,
+  store,
+}) => {
+  const [storyId, setStoryId] = useState<string>();
   const handleReport = useCallback((payload: StoryFinishedPayload) => {
-    console.log("StoryFinishedPayload", payload);
+    setStoryId(payload.storyId);
   }, []);
   useChannel(
     {
@@ -15,6 +31,33 @@ export const MarkupPanel = () => {
     },
     [handleReport]
   );
+  const [state] = experimental_useUniversalStore(store);
+  const report = useMemo(() => {
+    if (storyId && state) {
+      return state[storyId];
+    }
+  }, [storyId, state]);
 
-  return <pre>TODO: show story markup</pre>;
+  return active ? (
+    <div>
+      <pre>TODO: show story markup</pre>
+
+      {report ? (
+        <>
+          <h2>Snapshot Report</h2>
+          {report.status === "passed" && <p>No Markup changes</p>}
+          {report.status === "failed" && (
+            <>
+              <pre>{report.result}</pre>
+              <button type="button" onClick={() => accept(storyId!)}>
+                accept
+              </button>
+            </>
+          )}
+        </>
+      ) : (
+        <p>Run tests to compare markup</p>
+      )}
+    </div>
+  ) : null;
 };
