@@ -1,4 +1,5 @@
 import process from "node:process";
+import path from "node:path";
 import type { Vite, VitestPluginContext } from "vitest/node";
 import SnapshotDiffReporter from "./vitest-reporter";
 import { ADDON_ID } from "./constants";
@@ -13,11 +14,11 @@ export function plugin(): Vite.Plugin {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       process.on("message", (event: any) => {
         if (event?.type === "UNIVERSAL_STORE:storybook/test") {
-          const { type, storyId } = event.args[0].event;
+          const { type, fileName } = event.args[0].event;
           if (type === ADDON_ID + "__accept") {
-            console.log("!! accept", storyId);
-            // TODO
-            // context.vitest.updateSnapshot([storyId])
+            context.vitest.updateSnapshot([
+              path.resolve(context.vitest.config.root, fileName),
+            ]);
           }
         }
       });

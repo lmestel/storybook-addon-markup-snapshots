@@ -6,9 +6,9 @@ export const PANEL_ID = `${ADDON_ID}/panel`;
 export const TEST_PROVIDER_ID = `${ADDON_ID}/test-provider`;
 
 export type State = {
-  [key: string]: Report<string>;
+  [key: string]: Report<string | undefined>;
 };
 export type Event = {
   storyId: string;
-  report: Report<string>;
+  report: Report<string | undefined>;
 };
