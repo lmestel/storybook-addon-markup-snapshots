@@ -37,7 +37,11 @@ const preview: markupAddonAnnotations = {
       storyContext.reporting.addReport({
         type: TEST_PROVIDER_ID,
         version: 1,
-        result: createPatch(storyContext.id, error.expected, error.actual),
+        result: {
+          oldStr: error.expected,
+          diff: createPatch(storyContext.id, error.expected, error.actual),
+        },
+        // result: createPatch(storyContext.id, error.expected, error.actual),
         status: "failed",
       });
     }

@@ -7,6 +7,7 @@ import {
 } from "storybook/internal/manager-api";
 import type { State } from "../constants";
 import type { StoryPreparedPayload } from "storybook/internal/types";
+import { DiffViewer } from "./DiffViewer";
 
 type MarkupPanelProps = {
   accept: (fileName: string) => void;
@@ -29,6 +30,7 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
   const [state] = experimental_useUniversalStore(store);
   const report = useMemo(() => {
     if (story && state) {
+      console.log(state[story.id]);
       return state[story.id];
     }
   }, [story, state]);
@@ -43,7 +45,11 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
           {report.status === "passed" && <p>No Markup changes</p>}
           {report.status === "failed" && (
             <>
-              <pre>{report.result}</pre>
+              <DiffViewer
+                oldStr={report.result.oldStr}
+                diff={report.result.diff.split("\n").slice(2).join("\n")}
+              />
+              <pre>{JSON.stringify(report.result)}</pre>
               <button
                 type="button"
                 onClick={() => accept(story!.parameters.fileName)}
