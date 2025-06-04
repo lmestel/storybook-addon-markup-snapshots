@@ -30,17 +30,14 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
   const [state] = experimental_useUniversalStore(store);
   const report = useMemo(() => {
     if (story && state) {
-      console.log(state[story.id]);
       return state[story.id];
     }
   }, [story, state]);
 
   return active ? (
-    <div>
-      <pre>TODO: show story markup</pre>
-
+    <div style={{ backgroundColor: "white", color: "black" }}>
       {report ? (
-        <>
+        <div style={{ padding: "2rem" }}>
           <h2>Snapshot Report</h2>
           {report.status === "passed" && <p>No Markup changes</p>}
           {report.status === "failed" && (
@@ -49,7 +46,6 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
                 oldStr={report.result.oldStr}
                 diff={report.result.diff.split("\n").slice(2).join("\n")}
               />
-              <pre>{JSON.stringify(report.result)}</pre>
               <button
                 type="button"
                 onClick={() => accept(story!.parameters.fileName)}
@@ -58,7 +54,7 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
               </button>
             </>
           )}
-        </>
+        </div>
       ) : (
         <p>Run tests to compare markup</p>
       )}

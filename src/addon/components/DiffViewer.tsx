@@ -13,6 +13,8 @@ import {
 } from "react-diff-view";
 import * as refractor from "refractor";
 
+import "react-diff-view/style/index.css";
+
 const EMPTY_HUNKS: HunkData[] = [];
 
 type UnfoldCollapsedProps = {
@@ -53,7 +55,7 @@ const UnfoldCollapsed = ({
   );
 };
 
-const customTokenize = (hunks: HunkData[], oldSource: string) => {
+const customTokenize = (hunks: HunkData[], oldSource?: string) => {
   if (!hunks) {
     return undefined;
   }
@@ -69,28 +71,27 @@ const customTokenize = (hunks: HunkData[], oldSource: string) => {
   try {
     return tokenize(hunks, options);
   } catch (ex) {
-    console.log(ex);
+    console.error("Error tokenizing hunks:", ex);
     return undefined;
   }
 };
 
-const DiffView: ComponentType<DiffProps> = ({
-  hunks,
-  oldSource,
-  onExpandRange,
-}) => {
-  console.log("actually getting here");
+const DiffView: ComponentType<
+  DiffProps & {
+    oldSource?: string;
+    onExpandRange?: (start: number, end: number) => void;
+  }
+> = ({ hunks, oldSource, onExpandRange, diffType }) => {
   const tokens = customTokenize(hunks, oldSource);
 
   const renderHunk = (children: JSX.Element[], hunk: HunkData) => {
-    console.log("hunk", hunk);
     const previousElement = children[children.length - 1];
     const decorationElement = (
       <UnfoldCollapsed
         key={"decoration-" + hunk.content}
         previousHunk={previousElement && previousElement.props.hunk}
         currentHunk={hunk}
-        onClick={onExpandRange}
+        onClick={onExpandRange || (() => {})}
       />
     );
     children.push(decorationElement);
@@ -101,14 +102,10 @@ const DiffView: ComponentType<DiffProps> = ({
     return children;
   };
 
-  console.log("still here");
-  console.log(hunks.reduce(renderHunk, []));
-  console.log("tokens", tokens);
-
   return (
     <Diff
       viewType="split"
-      diffType="modify"
+      diffType={diffType}
       hunks={hunks || EMPTY_HUNKS}
       tokens={tokens}
     >
@@ -117,18 +114,26 @@ const DiffView: ComponentType<DiffProps> = ({
   );
 };
 
-const ExpandableDiffView = DiffView;
-export function DiffViewer({ oldStr, newStr, diff }: DiffProps) {
-  const files = parseDiff(diff, { nearbySequences: "zip" });
+const ExpandableDiffView = withSourceExpansion()(
+  minCollapsedLines(10)(DiffView)
+);
 
-  console.log("files", files, oldStr);
+export function DiffViewer({ oldStr, diff }: { oldStr: string; diff: string }) {
+  const files = parseDiff(diff, { nearbySequences: "zip" });
 
   return (
     <div style={{ fontSize: "12px" }}>
       {files &&
         files.length > 0 &&
-        files.map((file, index) => {
-          return <ExpandableDiffView {...file} oldSource={oldStr} />;
+        files.map((file) => {
+          return (
+            <ExpandableDiffView
+              onExpandRange={() => {}}
+              diffType="modify"
+              {...file}
+              oldSource={oldStr}
+            />
+          );
         })}
     </div>
   );
