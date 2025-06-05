@@ -10,10 +10,13 @@ import {
   minCollapsedLines,
   type HunkData,
   type DiffProps,
+  type ViewType,
 } from "react-diff-view";
 import * as refractor from "refractor";
 
 import "react-diff-view/style/index.css";
+import "./diff-viewer.css";
+import { Button } from "storybook/internal/components";
 
 const EMPTY_HUNKS: HunkData[] = [];
 
@@ -32,6 +35,11 @@ const UnfoldCollapsed = ({
     : 1;
   const end = currentHunk.oldStart - 1;
 
+  // TODO there's a bug here, I think
+  // there are files now that have hidden lines at the end,
+  // that can't be expanded
+  if (end - start + 1 <= 0) return;
+
   return (
     <tbody>
       <tr onClick={() => onClick(start, end)}>
@@ -40,15 +48,15 @@ const UnfoldCollapsed = ({
           data-end={end}
           colSpan={4}
           style={{
-            padding: "10px",
+            padding: "8px",
             textAlign: "center",
-            fontSize: "15px",
+            fontSize: "12px",
             cursor: "pointer",
           }}
         >
-          {end - start + 1 > 0
-            ? `Mehr anzeigen (${end - start + 1} Zeilen)`
-            : `Rest anzeigen`}
+          <Button variant="outline" size="small">
+            Show unchanged ({end - start + 1} lines)
+          </Button>
         </td>
       </tr>
     </tbody>
@@ -81,7 +89,7 @@ const DiffView: ComponentType<
     oldSource?: string;
     onExpandRange?: (start: number, end: number) => void;
   }
-> = ({ hunks, oldSource, onExpandRange, diffType }) => {
+> = ({ hunks, oldSource, onExpandRange, diffType, viewType }) => {
   const tokens = customTokenize(hunks, oldSource);
 
   const renderHunk = (children: JSX.Element[], hunk: HunkData) => {
@@ -104,7 +112,7 @@ const DiffView: ComponentType<
 
   return (
     <Diff
-      viewType="split"
+      viewType={viewType}
       diffType={diffType}
       hunks={hunks || EMPTY_HUNKS}
       tokens={tokens}
@@ -118,9 +126,16 @@ const ExpandableDiffView = withSourceExpansion()(
   minCollapsedLines(10)(DiffView)
 );
 
-export function DiffViewer({ oldStr, diff }: { oldStr: string; diff: string }) {
+export function DiffViewer({
+  oldStr,
+  diff,
+  viewType,
+}: {
+  oldStr: string;
+  diff: string;
+  viewType: ViewType;
+}) {
   const files = parseDiff(diff, { nearbySequences: "zip" });
-
   return (
     <div style={{ fontSize: "12px" }}>
       {files &&
@@ -130,6 +145,7 @@ export function DiffViewer({ oldStr, diff }: { oldStr: string; diff: string }) {
             <ExpandableDiffView
               onExpandRange={() => {}}
               diffType="modify"
+              viewType={viewType}
               {...file}
               oldSource={oldStr}
             />

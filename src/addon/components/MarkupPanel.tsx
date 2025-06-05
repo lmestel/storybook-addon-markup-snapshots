@@ -1,5 +1,7 @@
 import React, { useMemo, useState, type FC } from "react";
 import { STORY_PREPARED } from "storybook/internal/core-events";
+import { TabsState, Button } from "storybook/internal/components";
+import { BatchAcceptIcon } from "@storybook/icons";
 import {
   experimental_useUniversalStore,
   useChannel,
@@ -35,23 +37,37 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
   }, [story, state]);
 
   return active ? (
-    <div style={{ backgroundColor: "white", color: "black" }}>
+    <div>
       {report ? (
-        <div style={{ padding: "2rem" }}>
-          <h2>Snapshot Report</h2>
+        <div>
           {report.status === "passed" && <p>No Markup changes</p>}
           {report.status === "failed" && (
             <>
-              <DiffViewer
-                oldStr={report.result.oldStr}
-                diff={report.result.diff.split("\n").slice(2).join("\n")}
-              />
-              <button
-                type="button"
+              <TabsState initial="side-by-side" menuName="Diff Type">
+                <div id="side-by-side" title="Show diff Side-by-Side">
+                  <DiffViewer
+                    viewType="split"
+                    oldStr={report.result.oldStr}
+                    diff={report.result.diff.split("\n").slice(2).join("\n")}
+                  />
+                </div>
+                <div id="unified" title="Show diff unified">
+                  <DiffViewer
+                    viewType="unified"
+                    oldStr={report.result.oldStr}
+                    diff={report.result.diff.split("\n").slice(2).join("\n")}
+                  />
+                </div>
+              </TabsState>
+
+              <Button
                 onClick={() => accept(story!.parameters.fileName)}
+                variant="solid"
+                size="medium"
+                animation="glow"
               >
-                accept
-              </button>
+                <BatchAcceptIcon /> Accept All Changes
+              </Button>
             </>
           )}
         </div>
