@@ -241,7 +241,7 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
       {report ? (
         <div>
           {report.status === "passed" && <p>No Markup changes</p>}
-          {report.status === "failed" && (
+          {report.status === "failed" && report.result && (
             <>
               <StatusBar
                 storyFileName="LoremIpsum.tsx.stories"
@@ -285,6 +285,9 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
                 <BatchAcceptIcon /> Accept All Changes
               </Button>
             </>
+          )}
+          {report.status === "failed" && !report.result && (
+            <p>Error, report result missing</p>
           )}
         </div>
       ) : (
