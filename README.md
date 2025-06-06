@@ -1,54 +1,121 @@
-# React + TypeScript + Vite
+# Storybook Markup Tracking Addon
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Displays CSS Custom Properties used inside a component. Extracts those values using [`custom-property-extract`](https://github.com/Dschungelabenteuer/custom-property-extract), and then converts those to a format displayed alongside your component inside **Storybook**.
 
-Currently, two official plugins are available:
+This helps in making token associations explicit (which **Component Token** uses what **Design Token** under the hood), while also illustrating the layering of tokens inside a single component (for example to generate style variations).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+You can also interact with those variables, for example changing some colors around. Those changes get persisted in your browser session, so you can easily verify if your changes work in the context of other components, too (the new color on that button might not be accessible when used in you `Hero` component, after all). There's currently no way of persisting changes made in the browser in this way, but we're thinking about this. Let us know if that's something that you'd be interested in!
 
-## Expanding the ESLint configuration
+**[Show me a working demo](https://www.kickstartds.com/storybook/?path=/story/base-content-box--image)** (click on the `Component Tokens` addon tab)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+![Teaser image](./docs/teaser.png)
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+**Table of contents:**
+
+- [Storybook Markup Tracking Addon](#storybook-markup-tracking-addon)
+  - [What it's for](#what-its-for)
+  - [Getting started](#getting-started)
+    - [Usage](#usage)
+      - [Adding to DocsPage and MDX](#adding-to-docspage-and-mdx)
+      - [DocsPage](#docspage)
+  - [Advanced configuration](#advanced-configuration)
+  - [Development](#development)
+  - [TODOs and ideas for the future](#todos-and-ideas-for-the-future)
+  - [Credits](#credits)
+  - [Authors](#authors)
+
+## What it's for
+
+Main things you can do with this addon:
+
+1. Look through defined and layered **Component Token**
+2. Modify token assignments live in **Storybook**
+3. Test those changed tokens in all available contexts
+
+## Getting started
+
+```sh
+yarn add --dev @kickstartds/storybook-addon-component-tokens
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Enable the addon in [`.storybook/main.js`](https://storybook.js.org/docs/react/configure/overview#configure-your-storybook-project):
 
 ```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+module.exports = {
+  addons: ["@kickstartds/storybook-addon-component-tokens"],
+};
 ```
+
+To use it inside MDX, or when customising the docs page:
+
+```js
+import { CssPropsBlock } from "@kickstartds/storybook-addon-component-tokens";
+```
+
+### Usage
+
+Include your component tokens, the addon will apply and document this automatically.
+
+```jsx
+export default {
+  title: "Simple Component",
+  parameters: {
+    cssprops: {
+      customProperties: {
+        "--color-primary": [
+          {
+            value: "#ff017d",
+            selector: ":root"
+          }
+        ]
+      }
+    }
+  },
+} as Meta;
+```
+
+#### Adding to DocsPage and MDX
+
+This is currently not documented. But feel free to ping us on Twitter or Discord to learn more about this.
+
+#### DocsPage
+
+Modify the docs page based by [following the storybook docs](https://storybook.js.org/docs/react/writing-docs/docs-page#remixing-docspage-using-doc-blocks). Including `<CssPropsBlock />` where you prefer.
+
+## Advanced configuration
+
+This addon is still early, advanced configuration options will be added at a later date. Feel free to let us know in the issues if something specific is unclear, or doesn't work!
+
+## Development
+
+This monorepo uses yarn workspaces, run `yarn` at the root.
+
+## TODOs and ideas for the future
+
+[] Look for the args of a defined component when in MDX  
+[] Configurable per story sessionstorage.  
+[] Better specificity when injecting styles (with & without iframes)
+[] Functioning reset button.
+
+## Credits
+
+Portions of this package are sourced from the storybook source code in order to maintain look and feel.
+
+## Authors
+
+This addon was made with 🍋 by the team behind [kickstartDS - the frontend first framework](https://www.kickstartds.com/)!
+
+> kickstartDS is a comprehensive component and pattern library
+
+> We enable web development teams to create consistent and brand compliant web frontends super efficiently. With a built-in Design System to serve all your digital touch points. Easy like squeeeeezing a lemon.
+
+We use the addon to let users of our Design System solution interact with their components through our core JSON Schema property-layer. View our [landing page](https://www.kickstartds.com/) to learn more! 👋
+
+<p align="center">
+  <a href="https://www.kickstartDS.com/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://www.kickstartds.com/docs/img/logo-light.svg">
+      <img src="https://www.kickstartDS.com/logo.svg" alt="kickstartDS" width="400" />
+    </picture>
+  </a>
+</p>
