@@ -22,20 +22,25 @@ export default class SnapshotDiffReporter implements Reporter {
   onTestCaseResult(testCase: TestCase) {
     const { storyId, reports } = testCase.meta() as TaskMeta &
       Partial<{ storyId: string; reports: Report<string>[] }>;
-    if (storyId && reports) {
-      for (const report of reports) {
-        if (report.type === TEST_PROVIDER_ID) {
-          if (write && report.status === "failed") {
-            const outputPath = path.resolve(this.outputDir, `${storyId}.patch`);
-            fs.writeFileSync(outputPath, report.result);
-            console.log(`📝 Wrote snapshot diff to: ${outputPath}`);
+      if (storyId && reports) {
+        for (const report of reports) {
+          if (report.type === TEST_PROVIDER_ID) {
+          if (write) {
+            if (report.status === "failed") {
+              const outputPath = path.resolve(
+                this.outputDir,
+                `${storyId}.patch`
+              );
+              fs.writeFileSync(outputPath, report.result);
+              console.log(`📝 Wrote snapshot diff to: ${outputPath}`);
+            }
           } else {
             const event: Event = { storyId, report };
             process.send?.({
               type: ADDON_ID,
               args: [{ event }],
               from: "server",
-            } );
+            });
           }
         }
       }
