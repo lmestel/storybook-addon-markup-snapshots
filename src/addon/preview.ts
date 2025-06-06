@@ -34,14 +34,20 @@ const preview: markupAddonAnnotations = {
         status: "passed",
       });
     } catch (error: any) {
+      const expected = error.expected
+        .substring(1, error.expected.length - 1)
+        .replace(/^\n|\n$/g, "");
+      const actual = error.actual
+        .substring(1, error.actual.length - 1)
+        .replace(/^\n|\n$/g, "");
+
       storyContext.reporting.addReport({
         type: TEST_PROVIDER_ID,
         version: 1,
         result: {
-          oldStr: error.expected,
-          diff: createPatch(storyContext.id, error.expected, error.actual),
+          oldStr: expected,
+          diff: createPatch(storyContext.id, expected, actual),
         },
-        // result: createPatch(storyContext.id, error.expected, error.actual),
         status: "failed",
       });
     }
