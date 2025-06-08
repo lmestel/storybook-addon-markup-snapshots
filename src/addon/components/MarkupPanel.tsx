@@ -19,6 +19,7 @@ import {
   Separator,
   P,
   TooltipNote,
+  ActionBar,
 } from "storybook/internal/components";
 
 interface StatusBarProps {
@@ -229,6 +230,9 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
     },
     [setStory]
   );
+  const [diffType, setDiffType] = useState<"side-by-side" | "unified">(
+    "side-by-side"
+  );
   const [state] = experimental_useUniversalStore(store);
   const report = useMemo(() => {
     if (story && state) {
@@ -250,31 +254,59 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
                   console.log("TODO implement onScrollToEnd");
                 }}
               ></StatusBar>
-              <TabsState initial="side-by-side" menuName="Diff Type">
-                <div
-                  id="side-by-side"
-                  title="Show diff Side-by-Side"
-                  style={{ paddingTop: "5px" }}
-                >
-                  <DiffViewer
-                    viewType="split"
-                    oldStr={report.result.oldStr}
-                    diff={report.result.diff.split("\n").slice(2).join("\n")}
-                  />
-                </div>
-                <div
-                  id="unified"
-                  title="Show diff unified"
-                  style={{ paddingTop: "5px" }}
-                >
-                  <DiffViewer
-                    viewType="unified"
-                    oldStr={report.result.oldStr}
-                    diff={report.result.diff.split("\n").slice(2).join("\n")}
-                  />
-                </div>
-              </TabsState>
 
+              <div
+                style={{
+                  margin: "15px",
+                  position: "relative",
+                  backgroundColor: "rgb(34, 36, 37)",
+                  boxShadow: "rgba(255, 255, 255, 0.1) 0px -1px 0px 0px inset",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                }}
+              >
+                <ActionBar
+                  actionItems={[
+                    {
+                      title: "Side by side",
+                      onClick: () => {
+                        setDiffType("side-by-side");
+                      },
+                    },
+                    {
+                      title: "Unified",
+                      onClick: () => {
+                        setDiffType("unified");
+                      },
+                    },
+                  ]}
+                />
+                {diffType === "side-by-side" && (
+                  <div
+                    id="side-by-side"
+                    title="Show diff side-by-side"
+                    style={{ paddingTop: "5px" }}
+                  >
+                    <DiffViewer
+                      viewType="split"
+                      oldStr={report.result.oldStr}
+                      diff={report.result.diff.split("\n").slice(2).join("\n")}
+                    />
+                  </div>
+                )}
+                {diffType === "unified" && (
+                  <div
+                    id="unified"
+                    title="Show diff unified"
+                    style={{ paddingTop: "5px" }}
+                  >
+                    <DiffViewer
+                      viewType="unified"
+                      oldStr={report.result.oldStr}
+                      diff={report.result.diff.split("\n").slice(2).join("\n")}
+                    />
+                  </div>
+                )}
+              </div>
               <Button
                 onClick={() => accept(story!.parameters.fileName)}
                 variant="solid"

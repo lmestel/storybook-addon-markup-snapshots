@@ -137,7 +137,7 @@ export function DiffViewer({
 }) {
   const files = parseDiff(diff, { nearbySequences: "zip" });
   return (
-    <div style={{ fontSize: "12px" }}>
+    <div style={{ fontSize: "14px" }}>
       {files &&
         files.length > 0 &&
         files.map((file) => {
