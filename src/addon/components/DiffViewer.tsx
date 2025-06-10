@@ -50,7 +50,7 @@ const UnfoldCollapsed = ({
           style={{
             padding: "8px",
             textAlign: "center",
-            fontSize: "12px",
+            fontSize: "14px",
             cursor: "pointer",
           }}
         >

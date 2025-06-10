@@ -1,6 +1,14 @@
 import React, { useMemo, useState, type ComponentProps, type FC } from "react";
 import { STORY_PREPARED } from "storybook/internal/core-events";
-import { BatchAcceptIcon, SyncIcon } from "@storybook/icons";
+import {
+  BatchAcceptIcon,
+  CopyIcon,
+  FastForwardIcon,
+  PlayBackIcon,
+  PlayNextIcon,
+  RewindIcon,
+  SyncIcon,
+} from "@storybook/icons";
 import {
   experimental_useUniversalStore,
   useChannel,
@@ -13,13 +21,14 @@ import { styled, typography } from "storybook/internal/theming";
 import {
   Bar,
   Button,
-  TabsState,
   IconButton,
   WithTooltip,
   Separator,
   P,
   TooltipNote,
   ActionBar,
+  EmptyTabContent,
+  Link,
 } from "storybook/internal/components";
 
 interface StatusBarProps {
@@ -28,7 +37,8 @@ interface StatusBarProps {
     | CallStates.ERROR
     | CallStates.ACTIVE
     | CallStates.WAITING;
-  storyFileName?: string;
+  accept: (fileName: string) => void;
+  story?: StoryPreparedPayload;
   onScrollToEnd?: () => void;
 }
 
@@ -71,6 +81,7 @@ const StyledSubnav = styled.nav(() => ({
   alignItems: "center",
   justifyContent: "space-between",
   paddingLeft: 15,
+  paddingRight: 15,
 }));
 
 const Group = styled.div({
@@ -171,10 +182,33 @@ const StyledLocation = styled(P)(({ theme }) => ({
   fontSize: 13,
 }));
 
+const RewindButton = styled(StyledIconButton)({
+  marginLeft: 9,
+});
+
+interface AcceptButtonProps {
+  onClick: (fileName: string) => void;
+  fileName: string;
+}
+
+const AcceptButton: React.FC<AcceptButtonProps> = ({ onClick, fileName }) => {
+  return (
+    <Button
+      onClick={() => onClick(fileName)}
+      variant="solid"
+      size="small"
+      animation="glow"
+    >
+      <BatchAcceptIcon /> Accept XX (TODO) changes
+    </Button>
+  );
+};
+
 const StatusBar: React.FC<StatusBarProps> = ({
   status,
   onScrollToEnd,
-  storyFileName,
+  accept,
+  story,
 }) => {
   const buttonText =
     status === CallStates.ERROR ? "Scroll to error" : "Scroll to end";
@@ -185,13 +219,77 @@ const StatusBar: React.FC<StatusBarProps> = ({
         <StyledSubnav aria-label="Component tests toolbar">
           <Group>
             <StatusBadge status={status} />
-
             <JumpToEndButton onClick={onScrollToEnd} disabled={!onScrollToEnd}>
               {buttonText}
             </JumpToEndButton>
 
             <StyledSeparator />
 
+            <WithTooltip
+              trigger="hover"
+              hasChrome={false}
+              tooltip={<Note note="Previous component" />}
+            >
+              <RewindButton
+                aria-label="Go to start"
+                onClick={() => {
+                  console.log("TODO implement navigation");
+                }}
+                disabled={false}
+              >
+                <RewindIcon />
+              </RewindButton>
+            </WithTooltip>
+
+            <WithTooltip
+              trigger="hover"
+              hasChrome={false}
+              tooltip={<Note note="Previous variant" />}
+            >
+              <StyledIconButton
+                aria-label="Go back"
+                onClick={() => {
+                  console.log("TODO implement navigation");
+                }}
+                disabled={false}
+              >
+                <PlayBackIcon />
+              </StyledIconButton>
+            </WithTooltip>
+
+            <WithTooltip
+              trigger="hover"
+              hasChrome={false}
+              tooltip={<Note note="Next variant" />}
+            >
+              <StyledIconButton
+                aria-label="Go forward"
+                onClick={() => {
+                  console.log("TODO implement navigation");
+                }}
+                disabled={false}
+              >
+                <PlayNextIcon />
+              </StyledIconButton>
+            </WithTooltip>
+
+            <WithTooltip
+              trigger="hover"
+              hasChrome={false}
+              tooltip={<Note note="Go to end" />}
+            >
+              <StyledIconButton
+                aria-label="Go to end"
+                onClick={() => {
+                  console.log("TODO implement navigation");
+                }}
+                disabled={false}
+              >
+                <FastForwardIcon />
+              </StyledIconButton>
+            </WithTooltip>
+          </Group>
+          <Group>
             <WithTooltip
               trigger="hover"
               hasChrome={false}
@@ -206,17 +304,72 @@ const StatusBar: React.FC<StatusBarProps> = ({
                 <SyncIcon />
               </RerunButton>
             </WithTooltip>
+
+            <StyledSeparator />
+            <WithTooltip
+              trigger="hover"
+              hasChrome={false}
+              tooltip={<Note note="Accept XX (TODO) changes" />}
+            >
+              <AcceptButton
+                onClick={accept}
+                fileName={story!.parameters.fileName}
+              />
+            </WithTooltip>
           </Group>
-          {storyFileName && (
-            <Group>
-              <StyledLocation>{storyFileName}</StyledLocation>
-            </Group>
-          )}
         </StyledSubnav>
       </Bar>
     </SubnavWrapper>
   );
 };
+
+const CopyButton = ({ code }: { code: string }) => (
+  <Button
+    onClick={() => {
+      return copyTextToClipboard(code);
+    }}
+    variant="outline"
+    size="medium"
+    animation="glow"
+    className="diff-viewer--copy-code"
+  >
+    <CopyIcon />
+  </Button>
+);
+
+function fallbackCopyTextToClipboard(text: string) {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+
+  textArea.style.top = "0";
+  textArea.style.left = "0";
+  textArea.style.position = "fixed";
+
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  try {
+    document.execCommand("copy");
+  } catch (err) {
+    console.error("Fallback: Oops, unable to copy", err);
+  }
+
+  document.body.removeChild(textArea);
+}
+
+function copyTextToClipboard(text: string) {
+  if (!navigator.clipboard) {
+    fallbackCopyTextToClipboard(text);
+    return;
+  }
+  navigator.clipboard.writeText(text).then(
+    () => {},
+    (err) => {
+      console.error("Async: Could not copy text: ", err);
+    }
+  );
+}
 
 export const MarkupPanel: FC<MarkupPanelProps> = ({
   accept,
@@ -235,25 +388,48 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
   );
   const [state] = experimental_useUniversalStore(store);
   const report = useMemo(() => {
+    console.log(story, state, story && state[story?.id]);
     if (story && state) {
       return state[story.id];
     }
   }, [story, state]);
 
+  const storyFileName = "LoremIpsum.tsx.stories";
+
   return active ? (
-    <div>
+    <div className="diff-viewer">
       {report ? (
-        <div>
-          {report.status === "passed" && <p>No Markup changes</p>}
+        <div className="diff-viewer-wrapper">
+          {report.status === "passed" && (
+            <div className="diff-viewer--no-changes">
+              <EmptyTabContent
+                description="There were no markup changes detected"
+                title="No changes"
+                footer={
+                  <Link
+                    onClick={() => {
+                      console.log("TODO implement run tests");
+                    }}
+                    withArrow
+                  >
+                    Run tests again
+                  </Link>
+                }
+              />
+            </div>
+          )}
           {report.status === "failed" && report.result && (
             <>
               <StatusBar
-                storyFileName="LoremIpsum.tsx.stories"
+                accept={accept}
+                story={story}
                 status={CallStates.ACTIVE}
                 onScrollToEnd={() => {
                   console.log("TODO implement onScrollToEnd");
                 }}
               ></StatusBar>
+
+              <StyledLocation>{storyFileName}</StyledLocation>
 
               <div
                 style={{
@@ -283,9 +459,10 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
                 {diffType === "side-by-side" && (
                   <div
                     id="side-by-side"
+                    className="diff-viewer--diff"
                     title="Show diff side-by-side"
-                    style={{ paddingTop: "5px" }}
                   >
+                    <CopyButton code={report.result.diff} />
                     <DiffViewer
                       viewType="split"
                       oldStr={report.result.oldStr}
@@ -296,9 +473,10 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
                 {diffType === "unified" && (
                   <div
                     id="unified"
+                    className="diff-viewer--diff"
                     title="Show diff unified"
-                    style={{ paddingTop: "5px" }}
                   >
+                    <CopyButton code={report.result.diff} />
                     <DiffViewer
                       viewType="unified"
                       oldStr={report.result.oldStr}
@@ -307,23 +485,31 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
                   </div>
                 )}
               </div>
-              <Button
-                onClick={() => accept(story!.parameters.fileName)}
-                variant="solid"
-                size="medium"
-                animation="glow"
-                style={{ marginLeft: "5px", marginTop: "5px" }}
-              >
-                <BatchAcceptIcon /> Accept All Changes
-              </Button>
             </>
           )}
           {report.status === "failed" && !report.result && (
-            <p>Error, report result missing</p>
+            <p>
+              TODO Error, report result missing (what does this actually mean?)
+            </p>
           )}
         </div>
       ) : (
-        <p>Run tests to compare markup</p>
+        <div className="diff-viewer--empty">
+          <EmptyTabContent
+            description="Run tests to compare markup"
+            title="No tests yet"
+            footer={
+              <Link
+                onClick={() => {
+                  console.log("TODO implement run tests");
+                }}
+                withArrow
+              >
+                Run tests now
+              </Link>
+            }
+          />
+        </div>
       )}
     </div>
   ) : null;

@@ -2,12 +2,32 @@
 @import "prism-themes/themes/prism-vsc-dark-plus.css" screen and
   (prefers-color-scheme: dark);
 
-#side-by-side {
-  width: 100%;
+.diff-viewer {
+  height: 100%;
 }
 
-#unified {
+.diff-viewer-wrapper {
+  height: 100%;
+}
+
+.diff-viewer--empty {
+  height: 100%;
+}
+
+.diff-viewer--no-changes {
+  height: 100%;
+}
+
+.diff-viewer--diff {
+  position: relative;
   width: 100%;
+  padding-top: "5px";
+}
+
+.diff-viewer--copy-code {
+  position: absolute !important;
+  top: 10px;
+  right: 10px;
 }
 
 @media (prefers-color-scheme: dark) {
