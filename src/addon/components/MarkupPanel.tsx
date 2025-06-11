@@ -14,6 +14,7 @@ import {
   useChannel,
   experimental_UniversalStore,
 } from "storybook/internal/manager-api";
+import { internal_fullTestProviderStore } from "storybook/manager-api";
 import type { State } from "../constants";
 import type { StoryPreparedPayload } from "storybook/internal/types";
 import { DiffViewer } from "./DiffViewer";
@@ -30,6 +31,7 @@ import {
   EmptyTabContent,
   Link,
 } from "storybook/internal/components";
+import { parseDiff } from "react-diff-view";
 
 interface StatusBarProps {
   status:
@@ -171,14 +173,25 @@ const RerunButton = styled(StyledIconButton)<
   },
 }));
 
-const StyledLocation = styled(P)(({ theme }) => ({
+const StyledStoryPath = styled(P)(({ theme }) => ({
   color: theme.textMutedColor,
   justifyContent: "flex-end",
   textAlign: "right",
   whiteSpace: "nowrap",
-  marginTop: "auto",
+  marginTop: 4,
   marginBottom: 1,
   paddingRight: 15,
+  fontSize: 13,
+}));
+
+const StyledDetectedChanges = styled(P)(({ theme }) => ({
+  color: theme.textMutedColor,
+  justifyContent: "flex-start",
+  textAlign: "left",
+  whiteSpace: "nowrap",
+  marginTop: 4,
+  marginBottom: 1,
+  paddingLeft: 15,
   fontSize: 13,
 }));
 
@@ -210,8 +223,7 @@ const StatusBar: React.FC<StatusBarProps> = ({
   accept,
   story,
 }) => {
-  const buttonText =
-    status === CallStates.ERROR ? "Scroll to error" : "Scroll to end";
+  const buttonText = status === CallStates.ERROR ? "Expand all" : "Expand all";
 
   return (
     <SubnavWrapper>
@@ -298,7 +310,7 @@ const StatusBar: React.FC<StatusBarProps> = ({
               <RerunButton
                 aria-label="Rerun"
                 onClick={() => {
-                  console.log("TODO trigger rerun");
+                  internal_fullTestProviderStore.runAll();
                 }}
               >
                 <SyncIcon />
@@ -331,7 +343,7 @@ const CopyButton = ({ code }: { code: string }) => (
     variant="outline"
     size="medium"
     animation="glow"
-    className="diff-viewer--copy-code"
+    className="diff-viewer-copy-code"
   >
     <CopyIcon />
   </Button>
@@ -393,8 +405,22 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
       return state[story.id];
     }
   }, [story, state]);
-
-  const storyFileName = "LoremIpsum.tsx.stories";
+  const diff = useMemo(() => {
+    if (report && report.result) {
+      return parseDiff(report.result.diff.split("\n").slice(2).join("\n"), {
+        nearbySequences: "zip",
+      });
+    }
+  }, [report]);
+  // const componentStories = useMemo(() => {
+  //   const map = new Map();
+  // }, [state]);
+  const storyFileName = useMemo(() => {
+    if (story && story.parameters.fileName) {
+      return story.parameters.fileName;
+    }
+    return "Unknown file";
+  }, [story]);
 
   return active ? (
     <div className="diff-viewer">
@@ -408,7 +434,7 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
                 footer={
                   <Link
                     onClick={() => {
-                      console.log("TODO implement run tests");
+                      internal_fullTestProviderStore.runAll();
                     }}
                     withArrow
                   >
@@ -429,17 +455,20 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
                 }}
               ></StatusBar>
 
-              <StyledLocation>{storyFileName}</StyledLocation>
+              <div className="diff-viewer-diffmeta">
+                {diff && diff[0] && (
+                  <StyledDetectedChanges className="diff-viewer-changecount">
+                    {diff[0].hunks.length}{" "}
+                    {diff[0].hunks.length > 1 ? "changes" : "change"} in
+                  </StyledDetectedChanges>
+                )}
 
-              <div
-                style={{
-                  margin: "15px",
-                  position: "relative",
-                  backgroundColor: "rgb(34, 36, 37)",
-                  boxShadow: "rgba(255, 255, 255, 0.1) 0px -1px 0px 0px inset",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                }}
-              >
+                <StyledStoryPath className="diff-viewer-storypath">
+                  {storyFileName}
+                </StyledStoryPath>
+              </div>
+
+              <div className="diff-viewer-diffstage">
                 <ActionBar
                   actionItems={[
                     {
@@ -458,29 +487,30 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
                 />
                 {diffType === "side-by-side" && (
                   <div
-                    id="side-by-side"
-                    className="diff-viewer--diff"
+                    className="diff-viewer-diff"
                     title="Show diff side-by-side"
                   >
                     <CopyButton code={report.result.diff} />
                     <DiffViewer
                       viewType="split"
                       oldStr={report.result.oldStr}
-                      diff={report.result.diff.split("\n").slice(2).join("\n")}
+                      files={parseDiff(
+                        report.result.diff.split("\n").slice(2).join("\n"),
+                        { nearbySequences: "zip" }
+                      )}
                     />
                   </div>
                 )}
                 {diffType === "unified" && (
-                  <div
-                    id="unified"
-                    className="diff-viewer--diff"
-                    title="Show diff unified"
-                  >
+                  <div className="diff-viewer-diff" title="Show diff unified">
                     <CopyButton code={report.result.diff} />
                     <DiffViewer
                       viewType="unified"
                       oldStr={report.result.oldStr}
-                      diff={report.result.diff.split("\n").slice(2).join("\n")}
+                      files={parseDiff(
+                        report.result.diff.split("\n").slice(2).join("\n"),
+                        { nearbySequences: "zip" }
+                      )}
                     />
                   </div>
                 )}
@@ -501,7 +531,7 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
             footer={
               <Link
                 onClick={() => {
-                  console.log("TODO implement run tests");
+                  internal_fullTestProviderStore.runAll();
                 }}
                 withArrow
               >

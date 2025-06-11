@@ -1,6 +1,5 @@
 import React, { type ComponentType, type JSX } from "react";
 import {
-  parseDiff,
   Diff,
   Hunk,
   markEdits,
@@ -12,6 +11,7 @@ import {
   type DiffProps,
   type ViewType,
 } from "react-diff-view";
+import { type File } from "gitdiff-parser";
 import * as refractor from "refractor";
 
 import "react-diff-view/style/index.css";
@@ -35,10 +35,11 @@ const UnfoldCollapsed = ({
     : 1;
   const end = currentHunk.oldStart - 1;
 
-  // TODO there's a bug here, I think
-  // there are files now that have hidden lines at the end,
-  // that can't be expanded
-  if (end - start + 1 <= 0) return;
+  console.log("hunk run", start, end);
+
+  if (end - start + 1 <= 0) {
+    return;
+  }
 
   return (
     <tbody>
@@ -110,6 +111,8 @@ const DiffView: ComponentType<
     return children;
   };
 
+  console.log("hunks", hunks, hunks.reduce(renderHunk, []));
+
   return (
     <Diff
       viewType={viewType}
@@ -128,14 +131,13 @@ const ExpandableDiffView = withSourceExpansion()(
 
 export function DiffViewer({
   oldStr,
-  diff,
+  files,
   viewType,
 }: {
   oldStr: string;
-  diff: string;
+  files: File[];
   viewType: ViewType;
 }) {
-  const files = parseDiff(diff, { nearbySequences: "zip" });
   return (
     <div style={{ fontSize: "14px" }}>
       {files &&
@@ -146,8 +148,8 @@ export function DiffViewer({
               onExpandRange={() => {}}
               diffType="modify"
               viewType={viewType}
-              {...file}
               oldSource={oldStr}
+              {...file}
             />
           );
         })}
