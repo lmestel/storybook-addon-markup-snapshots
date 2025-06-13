@@ -12,10 +12,11 @@ import {
 import {
   experimental_useUniversalStore,
   useChannel,
+  useStorybookApi,
   experimental_UniversalStore,
 } from "storybook/internal/manager-api";
 import { internal_fullTestProviderStore } from "storybook/manager-api";
-import type { State } from "../constants";
+import type { Result, State } from "../constants";
 import type { StoryPreparedPayload } from "storybook/internal/types";
 import { DiffViewer } from "./DiffViewer";
 import { styled, typography } from "storybook/internal/theming";
@@ -32,6 +33,8 @@ import {
   Link,
 } from "storybook/internal/components";
 import { parseDiff } from "react-diff-view";
+import { DoublyLinkedList } from "linked-list-typed";
+import type { Report } from "storybook/internal/preview-api";
 
 interface StatusBarProps {
   status:
@@ -42,6 +45,9 @@ interface StatusBarProps {
   accept: (fileName: string) => void;
   story?: StoryPreparedPayload;
   onScrollToEnd?: () => void;
+  componentState: DoublyLinkedList<ComponentState>;
+  activeComponent: ReturnType<DoublyLinkedList<ComponentState>["getNodeAt"]>;
+  activeReport: ReturnType<DoublyLinkedList<ComponentReport>["getNodeAt"]>;
 }
 
 enum CallStates {
@@ -61,6 +67,16 @@ interface StatusBadgeProps {
 
 interface AnimatedButtonProps {
   animating?: boolean;
+}
+
+interface ComponentReport {
+  storyId: string;
+  report: Report<Result | undefined>;
+}
+
+interface ComponentState {
+  component: string;
+  reports: DoublyLinkedList<ComponentReport>;
 }
 
 type MarkupPanelProps = {
@@ -222,8 +238,12 @@ const StatusBar: React.FC<StatusBarProps> = ({
   onScrollToEnd,
   accept,
   story,
+  componentState,
+  activeComponent,
+  activeReport,
 }) => {
   const buttonText = status === CallStates.ERROR ? "Expand all" : "Expand all";
+  const api = useStorybookApi();
 
   return (
     <SubnavWrapper>
@@ -243,9 +263,12 @@ const StatusBar: React.FC<StatusBarProps> = ({
               tooltip={<Note note="Previous component" />}
             >
               <RewindButton
-                aria-label="Go to start"
+                aria-label="Go to previous component"
                 onClick={() => {
-                  console.log("TODO implement navigation");
+                  const target = activeComponent?.prev
+                    ? activeComponent?.prev?.value.reports.tail?.value.storyId
+                    : componentState.tail?.value.reports.tail?.value.storyId;
+                  if (target) api.selectStory(target);
                 }}
                 disabled={false}
               >
@@ -259,9 +282,12 @@ const StatusBar: React.FC<StatusBarProps> = ({
               tooltip={<Note note="Previous variant" />}
             >
               <StyledIconButton
-                aria-label="Go back"
+                aria-label="Go to previous variant"
                 onClick={() => {
-                  console.log("TODO implement navigation");
+                  const target = activeReport?.prev
+                    ? activeReport.prev.value.storyId
+                    : activeComponent?.value.reports.tail?.value.storyId;
+                  if (target) api.selectStory(target);
                 }}
                 disabled={false}
               >
@@ -275,9 +301,12 @@ const StatusBar: React.FC<StatusBarProps> = ({
               tooltip={<Note note="Next variant" />}
             >
               <StyledIconButton
-                aria-label="Go forward"
+                aria-label="Go to next variant"
                 onClick={() => {
-                  console.log("TODO implement navigation");
+                  const target = activeReport?.next
+                    ? activeReport.next.value.storyId
+                    : activeComponent?.value.reports.head?.value.storyId;
+                  if (target) api.selectStory(target);
                 }}
                 disabled={false}
               >
@@ -288,12 +317,15 @@ const StatusBar: React.FC<StatusBarProps> = ({
             <WithTooltip
               trigger="hover"
               hasChrome={false}
-              tooltip={<Note note="Go to end" />}
+              tooltip={<Note note="Next component" />}
             >
               <StyledIconButton
-                aria-label="Go to end"
+                aria-label="Go to next component"
                 onClick={() => {
-                  console.log("TODO implement navigation");
+                  const target = activeComponent?.next
+                    ? activeComponent?.next?.value.reports.head?.value.storyId
+                    : componentState.head?.value.reports.head?.value.storyId;
+                  if (target) api.selectStory(target);
                 }}
                 disabled={false}
               >
@@ -383,6 +415,10 @@ function copyTextToClipboard(text: string) {
   );
 }
 
+function idToName(id: string): string {
+  return id.split("--")[0];
+}
+
 export const MarkupPanel: FC<MarkupPanelProps> = ({
   accept,
   active,
@@ -412,15 +448,51 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
       });
     }
   }, [report]);
-  // const componentStories = useMemo(() => {
-  //   const map = new Map();
-  // }, [state]);
-  const storyFileName = useMemo(() => {
-    if (story && story.parameters.fileName) {
-      return story.parameters.fileName;
-    }
-    return "Unknown file";
-  }, [story]);
+  const componentState = useMemo(() => {
+    return Object.keys(state).reduce((testList, storyId) => {
+      const storyResult = state[storyId];
+      if (storyResult.status === "failed" && storyResult.result) {
+        const componentName = idToName(storyId);
+        const existingComponent = testList.find(
+          (item) => item.component === componentName
+        );
+        if (!existingComponent) {
+          const reports = new DoublyLinkedList<ComponentReport>([
+            {
+              storyId,
+              report: storyResult,
+            },
+          ]);
+          testList.unshift({ component: componentName, reports });
+        } else {
+          existingComponent.reports.push({
+            storyId,
+            report: storyResult,
+          });
+        }
+      }
+
+      return testList;
+    }, new DoublyLinkedList<ComponentState>());
+  }, [state]);
+  const activeComponent = useMemo(
+    () =>
+      componentState.getNode(
+        (item) => item.value.component === idToName(story!.id)
+      ),
+    [story, componentState]
+  );
+  const activeReport = useMemo(
+    () =>
+      activeComponent?.value.reports.getNode(
+        (report) => report.value.storyId === story!.id
+      ),
+    [story, activeComponent]
+  );
+  const storyFileName = useMemo(
+    () => (story && story.parameters.fileName) || "Unknown file",
+    [story]
+  );
 
   return active ? (
     <div className="diff-viewer">
@@ -453,6 +525,9 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
                 onScrollToEnd={() => {
                   console.log("TODO implement onScrollToEnd");
                 }}
+                componentState={componentState}
+                activeComponent={activeComponent}
+                activeReport={activeReport}
               ></StatusBar>
 
               <div className="diff-viewer-diffmeta">
