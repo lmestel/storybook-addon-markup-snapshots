@@ -45,9 +45,7 @@ interface StatusBarProps {
   accept: (fileName: string) => void;
   story?: StoryPreparedPayload;
   onScrollToEnd?: () => void;
-  componentState: DoublyLinkedList<ComponentState>;
-  activeComponent: ReturnType<DoublyLinkedList<ComponentState>["getNodeAt"]>;
-  activeReport: ReturnType<DoublyLinkedList<ComponentReport>["getNodeAt"]>;
+  state: State;
 }
 
 enum CallStates {
@@ -238,12 +236,52 @@ const StatusBar: React.FC<StatusBarProps> = ({
   onScrollToEnd,
   accept,
   story,
-  componentState,
-  activeComponent,
-  activeReport,
+  state,
 }) => {
-  const buttonText = status === CallStates.ERROR ? "Expand all" : "Expand all";
   const api = useStorybookApi();
+  const componentState = useMemo(() => {
+    return Object.keys(state).reduce((testList, storyId) => {
+      const storyResult = state[storyId];
+      if (storyResult.status === "failed" && storyResult.result) {
+        const componentName = idToName(storyId);
+        const existingComponent = testList.find(
+          (item) => item.component === componentName
+        );
+        if (!existingComponent) {
+          const reports = new DoublyLinkedList<ComponentReport>([
+            {
+              storyId,
+              report: storyResult,
+            },
+          ]);
+          testList.unshift({ component: componentName, reports });
+        } else {
+          existingComponent.reports.push({
+            storyId,
+            report: storyResult,
+          });
+        }
+      }
+
+      return testList;
+    }, new DoublyLinkedList<ComponentState>());
+  }, [state]);
+  const activeComponent = useMemo(
+    () =>
+      componentState.getNode(
+        (item) => item.value.component === idToName(story!.id)
+      ),
+    [story, componentState]
+  );
+  const activeReport = useMemo(
+    () =>
+      activeComponent?.value.reports.getNode(
+        (report) => report.value.storyId === story!.id
+      ),
+    [story, activeComponent]
+  );
+
+  const buttonText = status === CallStates.ERROR ? "Expand all" : "Expand all";
 
   return (
     <SubnavWrapper>
@@ -448,47 +486,6 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
       });
     }
   }, [report]);
-  const componentState = useMemo(() => {
-    return Object.keys(state).reduce((testList, storyId) => {
-      const storyResult = state[storyId];
-      if (storyResult.status === "failed" && storyResult.result) {
-        const componentName = idToName(storyId);
-        const existingComponent = testList.find(
-          (item) => item.component === componentName
-        );
-        if (!existingComponent) {
-          const reports = new DoublyLinkedList<ComponentReport>([
-            {
-              storyId,
-              report: storyResult,
-            },
-          ]);
-          testList.unshift({ component: componentName, reports });
-        } else {
-          existingComponent.reports.push({
-            storyId,
-            report: storyResult,
-          });
-        }
-      }
-
-      return testList;
-    }, new DoublyLinkedList<ComponentState>());
-  }, [state]);
-  const activeComponent = useMemo(
-    () =>
-      componentState.getNode(
-        (item) => item.value.component === idToName(story!.id)
-      ),
-    [story, componentState]
-  );
-  const activeReport = useMemo(
-    () =>
-      activeComponent?.value.reports.getNode(
-        (report) => report.value.storyId === story!.id
-      ),
-    [story, activeComponent]
-  );
   const storyFileName = useMemo(
     () => (story && story.parameters.fileName) || "Unknown file",
     [story]
@@ -525,9 +522,7 @@ export const MarkupPanel: FC<MarkupPanelProps> = ({
                 onScrollToEnd={() => {
                   console.log("TODO implement onScrollToEnd");
                 }}
-                componentState={componentState}
-                activeComponent={activeComponent}
-                activeReport={activeReport}
+                state={state}
               ></StatusBar>
 
               <div className="diff-viewer-diffmeta">
