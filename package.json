@@ -1,6 +1,6 @@
 {
   "name": "@kickstartds/storybook-addon-markup",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Track markup changes with Storybook, integrates with the new Storybook 9.0+ Vitest-based testing framework",
   "keywords": [
     "storybook-addons",
