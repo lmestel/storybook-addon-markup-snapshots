@@ -21,7 +21,8 @@
     "build-storybook": "storybook build",
     "lint": "eslint .",
     "storybook": "storybook dev -p 6006",
-    "test": "vitest"
+    "test": "vitest",
+    "postversion": "./scripts/generate-snapshot-patches.sh $(./scripts/previous-version.sh v$npm_package_version) v$npm_package_version && git add . && git commit --amend --no-edit && git tag -f \"v$npm_package_version\""
   },
   "dependencies": {
     "diff": "^8.0.1",
