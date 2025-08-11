@@ -48,7 +48,7 @@ addons.register(ADDON_ID, (api) => {
         sidebarContextMenu: true,
       });
     }
-    statusStore.set(statuses);
+    setTimeout(() => statusStore.set(statuses), 0);
   });
   statusStore.onSelect(() => {
     api.setSelectedPanel(PANEL_ID);
